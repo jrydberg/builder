@@ -19,6 +19,9 @@ from webob.dec import wsgify
 from webob.exc import HTTPNotFound, HTTPInternalServerError
 import errno
 import hashlib
+import os.path
+
+from xdura import static
 
 
 class ImageResource(object):
@@ -32,8 +35,8 @@ class ImageResource(object):
     def show(self, request, image, format=None):
         """Return content of image or 404."""
         try:
-            with open(os.path.join(self.image_dir, image)) as fp:
-                return static.make_response(fp, self.CONTENT_TYPE)
+            fp = open(os.path.join(self.image_dir, image))
+            return static.make_response(fp, self.CONTENT_TYPE)
         except OSError, err:
             if err.errno == errno.ENOENT:
                 raise HTTPNotFound()
@@ -123,8 +126,8 @@ class API(object):
             path_prefix='/build/{app}', collection_actions=['index', 'create'],
             member_actions=['show', 'delete'], member_prefix='/{name}')
         # FIXME: maybe it is better to just do a simple mapper.connect
-        self.mapper.collection("images", "image", controller='build',
-            path_prefix='/build', collection_actions=[],
+        self.mapper.collection("images", "image", controller='image',
+            path_prefix='/image', collection_actions=[],
             member_actions=['show'], member_prefix='/{image}')
 
     @wsgify

@@ -1,4 +1,4 @@
-m# Copyright 2013 Johan Rydberg.
+# Copyright 2013 Johan Rydberg.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ m# Copyright 2013 Johan Rydberg.
 
 import os
 from webob import Response
+
 
 class FileIterable(object):
 
@@ -38,7 +39,8 @@ class FileIterator(object):
     def next(self):
         chunk = self.file.read(self.chunk_size)
         if not chunk:
-             raise StopIteration
+            self.file.close()
+            raise StopIteration
         return chunk
 
 
