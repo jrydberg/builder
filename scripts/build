@@ -1,0 +1,67 @@
+#!/bin/bash
+# Copyright 2013 Johan Rydberg.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Some of this come from Openroku. Thanks.
+
+BUILD_DIR=$1
+PACKS_DIR=$2
+IMAGE=$3
+
+set -e
+
+function echo_title() {
+  echo $'\e[1G----->' $*
+}
+
+function process() {
+  while read line; do
+    if [[ "$line" == --* ]]; then
+      echo $'\e[1G'$line
+    else
+      echo $'\e[1G      ' "$line"
+    fi
+
+  done 
+}
+
+for BUILDPACK in "$PACKS_DIR/*"; do
+  BUILDPACK_NAME=$($BUILDPACK/bin/detect "$BUILD_DIR") \
+     && SELECTED_BUILDPACK=$BUILDPACK && break
+done
+
+if [ -n "$SELECTED_BUILDPACK" ]; then
+  echo_title "$BUILDPACK_NAME app detected"
+else
+  echo_title "Unable to select a buildpack"
+  exit 1
+fi
+
+#sleep 10
+
+#echo_title "DONE!"
+
+#exit 1
+
+
+($SELECTED_BUILDPACK/bin/compile "$BUILD_DIR") | process
+
+if [ -f "$BUILD_DIR/.slugignore" ]; then
+  tar --exclude='.git' -X "$BUILD_DIR/.slugignore" -C $BUILD_DIR -czf $IMAGE .
+else
+  tar --exclude='.git' -C $BUILD_DIR -czf $IMAGE .
+fi
+
+SLUG_SIZE=$(du -Sh $IMAGE | cut -d' ' -f1)
+echo_title "Compiled app image size is $SLUG_SIZE"
