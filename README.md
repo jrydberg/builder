@@ -6,9 +6,36 @@ need to configure those for the user that will run the builder server.
 
 # Installation
 
+Install in a virtual environment:
+
+    $ virtualenv .
+    $ . bin/activate
+    $ pip install -r requirements.txt
+
+Create your database and prepare directories for images and build
+packs:
+
+    $ sqlite3 -init schema.sql builder.db .quit
+    $ mkdir images packs
+
+Install the build packs that you want:
+
+    $ cd packs
+    $ git clone https://github.com/gilliam/buildpack-python.git
+
+# Running
+
+If not already done, activate your virtualenv in the source root
+directory, and then start the service using `honcho`:
+
+    $ . bin/activate
+    $ honcho start -p 9000
+
+If you need to change any config setting look at `.env`
+
 # API
 
-The builder provides a simple REST API normally running on port 8001.
+The builder provides a simple REST API normally running on port 9000.
 It exposes two kinds of resources: builds and images.  You can find
 builds under `/build/{app}' and images under '/image/{image}'.
 

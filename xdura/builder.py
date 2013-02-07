@@ -111,15 +111,15 @@ class Builder(object):
         name = self._make_name()
         image = hashlib.md5(repository + commit).hexdigest()
         pstable = self._read_pstable()
-        popen = subprocess.Popen([self.build_script, self.dir,
-                                  self.packs_dir, os.path.join(
-                                      self.image_dir, image)],
+        build_script = os.path.join(os.getcwd(), self.build_script)
+        packs_dir = os.path.join(os.getcwd(), self.packs_dir)
+        image_path = os.path.join(os.getcwd(), os.path.join(
+                self.image_dir, image))
+        popen = subprocess.Popen([build_script, self.dir,
+                                  packs_dir, image_path],
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT,
                                  cwd=self.dir)
         process = _BuildProcess(popen, name, image, pstable)
         process.link(self._cleanup)
         return process
-
-        
-    

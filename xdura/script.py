@@ -12,31 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""The buildserver (aka builder) for Gilliam.
-
-Usage:
-  gilliam-builder -h | --help
-  gilliam-builder [options] DATABASE
-
-Options:
-  -h, --help                Show this screen and exit.
-  --version                 Show version and exit.
-  --packs-dir PATH          Where build packs live.
-                              [default: /var/lib/gilliam/packs].
-  --build-script PATH       The script that is used to build the images.
-                              [default: /var/lib/gilliam/build].
-  --image-dir PATH          Where app images are stored
-                              [default: /var/lib/gilliam/images].
-  -p PORT, --port PORT      Listen port number [default: 8001].
-  --server-name NAME        Hostname where the server can be reached.
-                              [default: localhost].
-"""
-
-from docopt import docopt
 from gevent import pywsgi, monkey
 monkey.patch_all(thread=False, time=False)
 import logging
 import os
+import sys
 
 from glock.clock import Clock
 from storm.locals import Store, create_database
@@ -47,18 +27,27 @@ from xdura.store import BuildStore
 
 
 def main():
-    options = docopt(__doc__, version='0.0')
-    print options
-    logging.basicConfig(level=logging.DEBUG)
+    options = os.environ
+    # check config:
+    if not os.path.exists(options['BUILD_SCRIPT']):
+        sys.exit("BUILD_SCRIPT does not exist")
+    format = '%(levelname)-8s %(name)s: %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=format)
     store = Store(create_database(options['DATABASE']))
     clock = Clock()
     build_store = BuildStore(clock, store)
     builder = Builder(logging.getLogger('builder'),
-                      options['--build-script'],
-                      options['--image-dir'],
-                      options['--packs-dir'])
-    environ = {'SERVER_NAME': options['--server-name'],
-               'SERVER_PORT': options['--port']}
+                      options['BUILD_SCRIPT'],
+                      options['IMAGE_DIR'],
+                      options['PACKS_DIR'])
+    environ = {'SERVER_NAME': options.get('SERVER_NAME', 'localhost'),
+               'SERVER_PORT': options['PORT']}
     app = API(logging.getLogger('api'), environ, 
-              options['--image-dir'], build_store, builder)
-    pywsgi.WSGIServer(('', int(options['--port'])), app).serve_forever()
+              options['IMAGE_DIR'], build_store, builder)
+    logging.info("Start serving requests on port %d" % (
+            int(options['PORT']),))
+    pywsgi.WSGIServer(('', int(options['PORT'])), app).serve_forever()
+
+
+if __name__ == '__main__':
+    main()
