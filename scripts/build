@@ -55,7 +55,7 @@ fi
 #exit 1
 
 
-($SELECTED_BUILDPACK/bin/compile "$BUILD_DIR") | process
+$SELECTED_BUILDPACK/bin/compile "$BUILD_DIR" | process
 
 if [ -f "$BUILD_DIR/.slugignore" ]; then
   tar --exclude='.git' -X "$BUILD_DIR/.slugignore" -C $BUILD_DIR -czf $IMAGE .
