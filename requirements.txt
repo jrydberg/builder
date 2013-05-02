@@ -1,4 +1,5 @@
-git+git://github.com/SiteSupport/gevent.git
+git+git://github.com/surfly/gevent.git
+git+git://github.com/gilliam/client.git
 glock
 Routes
 WebOb

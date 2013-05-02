@@ -20,106 +20,46 @@ import yaml
 import hashlib
 import errno
 import os
+from gevent.event import AsyncResult
 from gevent import subprocess
 
 
 class _BuildProcess(object):
 
-    def __init__(self, popen, name, image, pstable):
+    def __init__(self, popen, app, commit, text):
         self.popen = popen
-        self.result = popen.result
-        self.name = name
-        self.image = image
-        self.pstable = pstable
-        self.links = []
-        popen.rawlink(partial(gevent.spawn, self._finish))
+        self.app = app
+        self.commit = commit
+        self.text = text
 
-    def link(self, fn):
-        """Call C{fn} when the process has finished."""
-        self.error = self.popen.returncode
-        self.links.append(fn)
-
-    def _finish(self, event):
-        self._run_links()
-
-    def _run_links(self):
-        for link in self.links:
-            link(self)
+    def start(self, input_file):
+        def _pipe():
+            try:
+                for data in input_file:
+                    self.popen.stdin.write(data)
+            finally:
+                self.popen.stdin.close()
+        gevent.spawn(_pipe)
 
     def __iter__(self):
-        return self
-
-    def next(self):
-        """Return output."""
-        return next(self.popen.stdout)
-        print "READ DATA"
-        data = self.popen.stdout.read(1024)
-        print "GOT DATA", repr(data)
-        if not data:
-            raise StopIteration
-        return data
+        return iter(self.popen.stdout)
 
 
 class Builder(object):
     """Something that builds images."""
 
-    def __init__(self, log, build_script, image_dir, packs_dir):
+    def __init__(self, log, build_script):
         self.log = log
-        self.dir = tempfile.mkdtemp()
         self.build_script = build_script
-        self.image_dir = image_dir
-        self.packs_dir = packs_dir
 
-    def _cleanup(self, *args):
-        """Clean up the working directory."""
-        # FIXME: should we do this in an async friendly manner?
-        shutil.rmtree(self.dir)
-
-    def _checkout_repository(self, repository, commit):
-        """Checkout given repository into I{self.dir}."""
-        try:
-            subprocess.check_call(['git', 'clone', repository, self.dir])
-            subprocess.check_call(['git', 'checkout', commit], cwd=self.dir)
-        except subprocess.CalledProcessError, cpe:
-            raise Exception(cpe.output)
-
-    def _make_name(self):
-        """Construct and return a proper name for the build."""
-        try:
-            output = subprocess.check_output(
-                ['git', 'describe', '--tags', '--always'], cwd=self.dir)
-        except subprocess.CalledProcessError, cpe:
-            self.log.exception(cpe)
-            raise
-        else:
-            print "OUTPUT FROM MAKE NAME", output
-            return output.strip()
-
-    def _read_pstable(self):
-        """Return the process table."""
-        try:
-            with open(os.path.join(self.dir, 'Procfile')) as fp:
-                return yaml.load(fp)
-        except OSError, err:
-            if err.errno == errno.ENOENT:
-                return {}
-            raise
-
-    def issue_build(self, repository, commit):
+    def __call__(self, app, commit, text, input_file):
         """Issue a build request."""
-        self._checkout_repository(repository, commit)
-        name = self._make_name()
-        image = hashlib.md5(repository + commit).hexdigest()
-        pstable = self._read_pstable()
         build_script = os.path.join(os.getcwd(), self.build_script)
-        packs_dir = os.path.join(os.getcwd(), self.packs_dir)
-        image_path = os.path.join(os.getcwd(), os.path.join(
-                self.image_dir, image))
-        popen = subprocess.Popen([build_script, self.dir,
-                                  packs_dir, image_path],
+        popen = subprocess.Popen([build_script, app, commit, text],
+                                 stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT,
-                                 cwd=self.dir)
-        process = _BuildProcess(popen, name, image, pstable)
-        process.link(self._cleanup)
+                                 cwd=os.getcwd())
+        process = _BuildProcess(popen, app, commit, text)
+        process.start(input_file)
         return process

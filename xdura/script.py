@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gevent import pywsgi, monkey
+from gevent import pywsgi, monkey, socket
 monkey.patch_all(thread=False, time=False)
 import logging
 import os
@@ -26,28 +26,25 @@ from xdura.builder import Builder
 from xdura.store import BuildStore
 
 
-def main():
+def main(options):
     options = os.environ
     # check config:
     if not os.path.exists(options['BUILD_SCRIPT']):
         sys.exit("BUILD_SCRIPT does not exist")
     format = '%(levelname)-8s %(name)s: %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=format)
-    store = Store(create_database(options['DATABASE']))
+
     clock = Clock()
-    build_store = BuildStore(clock, store)
     builder = Builder(logging.getLogger('builder'),
-                      options['BUILD_SCRIPT'],
-                      options['IMAGE_DIR'],
-                      options['PACKS_DIR'])
-    environ = {'SERVER_NAME': options.get('SERVER_NAME', 'localhost'),
+                      options['BUILD_SCRIPT'])
+    environ = {'SERVER_NAME': options.get('SERVER_NAME', socket.getfqdn()),
                'SERVER_PORT': options['PORT']}
     app = API(logging.getLogger('api'), environ, 
-              options['IMAGE_DIR'], build_store, builder)
+              options['IMAGE_DIR'], builder)
     logging.info("Start serving requests on port %d" % (
             int(options['PORT']),))
-    pywsgi.WSGIServer(('', int(options['PORT'])), app).serve_forever()
+    return pywsgi.WSGIServer(('', int(options['PORT'])), app)
 
 
 if __name__ == '__main__':
-    main()
+    main(os.environ).serve_forever()

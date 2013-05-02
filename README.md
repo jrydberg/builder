@@ -1,68 +1,58 @@
 # Builder
 
-This is the component of Gilliam that builds app images.  It currently
-only supports git.  If you need any kind of special keys for git, you
-need to configure those for the user that will run the builder server.
+This is the component of Gilliam that builds app images and deploys
+them to the scheduler.  All the magic is located in `scripts/build`.
+If you need something special for your installation that's the file to
+change.
 
 # Installation
 
+First checkout the required submodules (the buildpacks):
+
+    git submodule init
+    git submodule update
+
 Install in a virtual environment:
 
-    $ virtualenv .
-    $ . bin/activate
-    $ pip install -r requirements.txt
-
-Create your database and prepare directories for images and build
-packs:
-
-    $ sqlite3 -init schema.sql builder.db .quit
-    $ mkdir images packs
-
-Install the build packs that you want:
-
-    $ cd packs
-    $ git clone https://github.com/gilliam/buildpack-python.git
+    virtualenv .
+    . bin/activate
+    pip install -r requirements.txt
 
 # Running
 
 If not already done, activate your virtualenv in the source root
 directory, and then start the service using `honcho`:
 
-    $ . bin/activate
-    $ honcho start -p 9000
+    . bin/activate
+    honcho start -p 9000
 
 If you need to change any config setting look at `.env`
 
 # API
 
 The builder provides a simple REST API normally running on port 9000.
-It exposes two kinds of resources: builds and images.  You can find
-builds under `/build/{app}' and images under '/image/{image}'.
+It exposes two kinds of resources: build and images.  You can find
+builds under `/build/' and images under '/image/{image}'.
 
-To create a new build issue a `POST` to `/build/{app}'.  The request
-body *MUST* contain a JSON object with the following fields:
+To create a new build issue a `POST` to `/build/'.  The request body
+should contain an uncompressed tarball of the app source code.  You
+also need to provide the following query parameters to the request:
 
-* `repository` (string) should point to a git repository.
-* `commit` (string, optional) defines the commit (branch/tag/commit) that
- should be built. 
+* `app` - name of the app.
+* `commit` - hash of the commit.
+* `text` - deploy message.
 
-The server should respond with a `202 Accept` once it has started
-processing the request.  The `Location` header in the response points
-to the build resource that will be a result of the process.  The body
-of the response is the output from the processing steps.  Display this
-to your user.
+The server should respond with a `200 OK` once it has started
+processing the request.  The body of the response is the output from
+the processing steps.  Display this to your user.
 
 Example:
 
-    $ curl --verbose http://localhost:8001/build/python-example -d '{
-       "repository": "https://github.com/gilliam/python-example.git",
-       "commit": "master"
-    }'
-
+    git archive --format=tar HEAD|curl "http://localhost:9000/build?app=example&commit=master&text=text" \
+      -H "Content-Type: application/octet-stream" --data-binary @-
     ...
-    < HTTP/1.1 202 Accepted
+    < HTTP/1.1 200 OK
     < Content-Type: text/html; charset=UTF-8
-    < Location: http://localhost:8001/build/python-example/6dc2f9e
     < Date: Thu, 31 Jan 2013 21:42:49 GMT
     < Transfer-Encoding: chunked
     < 
@@ -71,4 +61,3 @@ Example:
     -----> Preparing Python runtime (python-2.7.3)
     ...
 
-.

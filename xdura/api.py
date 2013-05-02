@@ -26,7 +26,8 @@ from xdura import static
 
 class ImageResource(object):
     """Resource handler that is responsible for serving out image
-    files.  The only allowed operation is C{GET}."""
+    files.  The only allowed operation is C{GET}.
+    """
     CONTENT_TYPE = 'application/octet-stream'
 
     def __init__(self, image_dir):
@@ -46,86 +47,43 @@ class ImageResource(object):
 
 class BuildResource(object):
     """Resource handler for our builds."""
-    ITEM_KIND = 'gilliam#build'
-    COL_KIND = 'gilliam#collection+build'
 
-    def __init__(self, log, url, store, builder):
+    def __init__(self, log, url, builder):
         self.log = log
         self.url = url
-        self.store = store
         self.builder = builder
 
-    def _make_build(self, build):
-        """Create a representation of a build."""
-        return dict(app=build.app, name=build.name,
-                    image=self.url('image', image=build.image,
-                                   qualified=True),
-                    pstable=build.pstable,
-                    created_at=build.timestamp.isoformat(' '),
-                    self=self.url('build', app=build.app,
-                                  name=build.name))
-
-    def _get(self, app, name):
-        build = self.store.by_app_and_name(app, name)
-        if build is None:
-            raise HTTPNotFound()
-        return build
-
-    def _assert_request_data(self, request):
-        if not request.json:
-            raise HTTPBadRequest()
-        return request.json
-
-    def _build_done(self, app, process):
-        """The process was done."""
-        # FIXME: what about the case if this fails?  maybe that is not
-        # the end of the world.
-        if not process.error:
-            self.store.create(app, process.name,
-                              process.image, process.pstable)
-
-    def create(self, request, app, format=None):
-        data = self._assert_request_data(request)
-        process = self.builder.issue_build(data['repository'],
-             data.get('commit', 'master'))
-        process.link(partial(self._build_done, app))
-        response = Response(status=202)
-        response.headers.add('Location', self.url('build', app=app,
-            name=process.name))
+    def create(self, request):
+        app, commit, text = self._assert_request_params(
+            request, 'app', 'commit', 'text')
+        self.log.info(dict(request.headers))
+        #request.is_body_readable = True
+        process = self.builder(app, commit, text, request.body_file)
+        response = Response(status=200)
         response.app_iter = process
         return response
 
-    def index(self, request, app, format=None):
-        items = []
-        for build in self.store.builds_for_app(app):
-            items.append(self._make_build(build))
-        collection = {'kind': self.COL_KIND, 'items': items}
-        return Response(json=collection, status=200)
-
-    def show(self, request, app, name, format=None):
-        build = self._get(app, name)
-        return Response(json=self._make_build(build), status=200)
-
-    def delete(self, request, id, format=None):
-        # FIXME: this does not remove the image for some reason.
-        self.store.remove(self._get(app, name))
-        return Response(status=204)
+    def _assert_request_params(self, request, *params):
+        values = []
+        for param in params:
+            if not param in request.params:
+                raise HTTPBadRequest()
+            values.append(request.params[param])
+        return values
 
 
 class API(object):
     """The REST API that we expose."""
 
-    def __init__(self, log, environ, image_dir, build_store, builder):
+    def __init__(self, log, environ, image_dir, builder):
         self.mapper = Mapper()
         self.url = URLGenerator(self.mapper, environ)
         self.resources = {
             'image': ImageResource(image_dir),
-            'build': BuildResource(log, self.url, build_store, builder)
+            'build': BuildResource(log, self.url, builder)
             }
-        self.mapper.collection("builds", "build", controller='build',
-            path_prefix='/build/{app}', collection_actions=['index', 'create'],
-            member_actions=['show', 'delete'], member_prefix='/{name}')
-        # FIXME: maybe it is better to just do a simple mapper.connect
+        self.mapper.connect("build", "/build", controller="build",
+                            action="create")
         self.mapper.collection("images", "image", controller='image',
             path_prefix='/image', collection_actions=[],
             member_actions=['show'], member_prefix='/{image}')

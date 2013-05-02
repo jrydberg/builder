@@ -13,13 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Some of this come from Openroku. Thanks.
+# This scripts expect the following variables to be set in the `.env`
+# file:
+#
+# - IMAGE_DIR -- where images should be written
+# - PACKS_DIR -- where build packs are located
+#
 
-BUILD_DIR=$1
-PACKS_DIR=$2
-IMAGE=$3
+APP=$1
+COMMIT=$2
+TEXT=$3
+
+TMPDIR=${TMPDIR:-/tmp}
+FQDN=`hostname --fqdn`
+SERVER_NAME=${SERVER_NAME:-$FQDN}
+SERVER_PORT=${SERVER_PORT:-$PORT}
+IMAGE=${APP}-${COMMIT}
+CACHE_DIR=$TMPDIR/build-cache-$APP
+
+BUILD_DIR=`mktemp -d`
 
 set -e
+trap "rm -rf $BUILD_DIR" EXIT
+
+mkdir -p $BUILD_DIR $CACHE_DIR
+
 
 function echo_title() {
   echo $'\e[1G----->' $*
@@ -32,9 +50,11 @@ function process() {
     else
       echo $'\e[1G      ' "$line"
     fi
-
   done 
 }
+
+echo_title "Receiving app bundle..."
+tar -C $BUILD_DIR -xf -
 
 for BUILDPACK in "$PACKS_DIR/*"; do
   BUILDPACK_NAME=$($BUILDPACK/bin/detect "$BUILD_DIR") \
@@ -48,20 +68,24 @@ else
   exit 1
 fi
 
-#sleep 10
-
-#echo_title "DONE!"
-
-#exit 1
-
-
-$SELECTED_BUILDPACK/bin/compile "$BUILD_DIR" | process
-
-if [ -f "$BUILD_DIR/.slugignore" ]; then
-  tar --exclude='.git' -X "$BUILD_DIR/.slugignore" -C $BUILD_DIR -czf $IMAGE .
-else
-  tar --exclude='.git' -C $BUILD_DIR -czf $IMAGE .
+# First check that we have a Procfile.
+if ! [ -e "$BUILD_DIR/Procfile" ]; then
+  echo_title "No Procfile available."
+  exit 1
 fi
 
-SLUG_SIZE=$(du -Sh $IMAGE | cut -d' ' -f1)
-echo_title "Compiled app image size is $SLUG_SIZE"
+$SELECTED_BUILDPACK/bin/compile "$BUILD_DIR" "$CACHE_DIR" | process
+
+if [ -f "$BUILD_DIR/.slugignore" ]; then
+  tar --exclude='.git' -X "$BUILD_DIR/.slugignore" -C $BUILD_DIR -czf $IMAGE_DIR/$IMAGE .
+else
+  tar --exclude='.git' -C $BUILD_DIR -czf $IMAGE_DIR/$IMAGE .
+fi
+
+SLUG_SIZE=$(du -Sh $IMAGE_DIR/$IMAGE | cut -f1)
+echo_title "App image size -> $SLUG_SIZE"
+
+IMAGE_URL=http://${SERVER_NAME}:${SERVER_PORT}/image/$IMAGE
+#echo gilliam --app $APP release --build $COMMIT --message "$TEXT" --procfile $BUILD_DIR/Procfile $IMAGE_URL
+echo -n $'\e[1G-----> Deploying release ... '
+gilliam --app $APP release --build $COMMIT --message "$TEXT" --procfile $BUILD_DIR/Procfile $IMAGE_URL
