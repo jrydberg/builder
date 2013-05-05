@@ -24,13 +24,13 @@ If not already done, activate your virtualenv in the source root
 directory, and then start the service using `honcho`:
 
     . bin/activate
-    honcho start -p 9000
+    honcho start -p 8001
 
 If you need to change any config setting look at `.env`
 
 # API
 
-The builder provides a simple REST API normally running on port 9000.
+The builder provides a simple REST API normally running on port 8001.
 It exposes two kinds of resources: build and images.  You can find
 builds under `/build/' and images under '/image/{image}'.
 
