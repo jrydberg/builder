@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
-import gevent
-import tempfile
-import shutil
-import yaml
-import hashlib
-import errno
 import os
-from gevent.event import AsyncResult
+
 from gevent import subprocess
+import gevent
 
 
 class _BuildProcess(object):

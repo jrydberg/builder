@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from gevent import pywsgi, monkey, socket
-monkey.patch_all(thread=False, time=False)
 import logging
 import os
 import sys
 
-from glock.clock import Clock
-from storm.locals import Store, create_database
+from gevent import pywsgi, monkey, socket
+monkey.patch_all(thread=False, time=False)
 
 from xdura.api import API
 from xdura.builder import Builder
@@ -32,7 +30,6 @@ def main(options):
     format = '%(levelname)-8s %(name)s: %(message)s'
     logging.basicConfig(level=logging.DEBUG, format=format)
 
-    clock = Clock()
     builder = Builder(logging.getLogger('builder'),
                       options['BUILD_SCRIPT'])
     environ = {'SERVER_NAME': options.get('SERVER_NAME', socket.getfqdn()),

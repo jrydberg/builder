@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
+import errno
+import os.path
+
 from routes import Mapper, URLGenerator
 from webob import Response
 from webob.dec import wsgify
-from webob.exc import HTTPNotFound, HTTPInternalServerError
-import errno
-import hashlib
-import os.path
+from webob.exc import (HTTPNotFound, HTTPInternalServerError,
+                       HTTPBadRequest)
 
 from xdura import static
 
