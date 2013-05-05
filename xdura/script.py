@@ -23,11 +23,9 @@ from storm.locals import Store, create_database
 
 from xdura.api import API
 from xdura.builder import Builder
-from xdura.store import BuildStore
 
 
 def main(options):
-    options = os.environ
     # check config:
     if not os.path.exists(options['BUILD_SCRIPT']):
         sys.exit("BUILD_SCRIPT does not exist")
