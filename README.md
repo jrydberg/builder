@@ -5,6 +5,8 @@ them to the scheduler.  All the magic is located in `scripts/build`.
 If you need something special for your installation that's the file to
 change.
 
+[![Build Status](https://travis-ci.org/gilliam/builder.png)](https://travis-ci.org/gilliam/builder)
+
 # Installation
 
 First checkout the required submodules (the buildpacks):
