@@ -41,5 +41,8 @@ def main(options):
     return pywsgi.WSGIServer(('', int(options['PORT'])), app)
 
 
-if __name__ == '__main__':
+def _start():
     main(os.environ).serve_forever()
+
+if __name__ == '__main__':
+    _start()

@@ -1,1 +1,1 @@
-api: python -m xdura.script
+api: PYTHONPATH=$PWD bin/api
