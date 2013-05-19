@@ -1,25 +1,25 @@
 --- 
-language: python
-before_script: 
-- gem install travis-artifacts
-- gem install fpm
+script: nosetests
+after_script: 
+- test $TRAVIS_BRANCH = master && bash pkg/build-ubuntu-upstart.sh && travis-artifacts upload --path *.deb --target-path /
 env: 
   global: 
   - ARTIFACTS_S3_BUCKET: gilliam-artifacts
   - secure: |-
-      RoBO5jrJNn2M4HIV1qyV7glvRoFtnVdvNvnn5WmZSm/5MhY7wQKnJqnEDsmQ
-      oFZCMZZ2mqlgMXGfW9iv5QHG8sYow0LnABDk5ByayEHm1Qh6ShfQLgk4iITp
-      5J8ld01PWd+XFfRfcDSNLPXPlYQ0PeQl7l66YS7hc2jq8rsIm/s=
+      O1l6Ma20Il0bqgCSUkEq42a3yIS61JUT9/nUkFqi+MRzSkzN6pZT9L3H4E1l
+      dJ3l7zlgqK7oqtMnZeng696sfPwGClggHGkLfHDTyylScm0soiJPqky5q1Eq
+      LTD8a4HgR+YPTsPT26L3VNwSDJmOdXnid29H2mwILGuGS7ZN32Q=
   - secure: |-
-      BNpmtQPpETNA1sG2APMyPv+XsKIySD0zOWJYbm78bDcLTCzU+x5xRTKEP94T
-      cz+ywnomSEt9xAUqsJQntFUPI5q7LJVchatQGXCECpJw7yW4MWWrYsvpTjvH
-      USKyS1llvP4SCXe2uDD+9fNtUD8PMWiaAyMN+HvYbGUXN1rJ2rE=
+      eK/raUtZx2iQJQJLKyMS+drpjptYF0IHChjiM54+nhtMjyUBVduHGIk3M8Mp
+      oHDj8iOm6gMoXQmOn/dyNmjlbMT4G+CWUMMLu6Det+s3F0lVIXm9tb9qgdJc
+      j0vI1gnhw5FvqzGOGcyb8gNiAqFGUppMGEFtcVjeopAg1WjZPWA=
+before_script: 
+- gem install travis-artifacts
+- gem install fpm
 services: sqlite3
+install: pip install -r requirements.txt --use-mirrors
 before_install: 
 - pip install --use-mirrors Cython
-install: pip install -r requirements.txt --use-mirrors
-after_script: 
-- test $TRAVIS_BRANCH = master && bash pkg/build-ubuntu-upstart.sh && travis-artifacts upload --path *.deb --target-path /
+language: python
 python: 
 - "2.7"
-script: nosetests
