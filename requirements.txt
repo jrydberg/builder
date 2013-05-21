@@ -2,4 +2,4 @@ git+git://github.com/surfly/gevent.git
 git+git://github.com/gilliam/client.git
 Routes
 WebOb
-honcho
+git+git://github.com/gilliam/honcho.git
