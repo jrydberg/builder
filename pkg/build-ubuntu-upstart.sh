@@ -23,7 +23,7 @@ BUILDDIR=${TOPDIR}/build
 set -x
 
 rm -rf ${BUILDDIR} && mkdir -p ${BUILDDIR}/${INSTALLDIR}
-git archive --format=tar ${HEAD} | tar -C ${BUILDDIR}/${INSTALLDIR} -xf -
+(cd ${BUILDDIR}/${INSTALLDIR} && git clone ${TOPDIR} . && git submodule init && git submodule update && rm -rf .git)
 
 cd ${BUILDDIR}/${INSTALLDIR}
 virtualenv .
