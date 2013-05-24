@@ -15,7 +15,7 @@
 
 HEAD=${1:-HEAD}
 VERSION=$(git describe --tags --always)
-PORT=${PORT:-8000}
+PORT=${PORT:-8001}
 INSTALLDIR=${INSTALLDIR:-/opt/gilliam/builder}
 TOPDIR=$(pwd)
 BUILDDIR=${TOPDIR}/build
